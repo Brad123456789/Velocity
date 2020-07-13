@@ -46,7 +46,7 @@ public class VelocityCommand implements Command {
         .filter(e -> e.getValue().hasPermission(source, new String[0]))
         .map(Map.Entry::getKey)
         .collect(Collectors.joining("|"));
-    String commandText = "/velocity <" + availableCommands + ">";
+    String commandText = "/vexcord <" + availableCommands + ">";
     source.sendMessage(TextComponent.of(commandText, TextColor.RED));
   }
 
@@ -152,7 +152,7 @@ public class VelocityCommand implements Command {
     @Override
     public void execute(CommandSource source, String @NonNull [] args) {
       if (args.length != 0) {
-        source.sendMessage(TextComponent.of("/velocity version", TextColor.RED));
+        source.sendMessage(TextComponent.of("/vexcord version", TextColor.RED));
         return;
       }
 
@@ -164,26 +164,12 @@ public class VelocityCommand implements Command {
           .append(TextComponent.of(version.getVersion()).decoration(TextDecoration.BOLD, false))
           .build();
       TextComponent copyright = TextComponent
-          .of("Copyright 2018-2020 " + version.getVendor() + ". " + version.getName()
-              + " is freely licensed under the terms of the MIT License.");
+          .of("Copyright 2019-2020 " + version.getVendor() + ". " + version.getName());
       source.sendMessage(velocity);
       source.sendMessage(copyright);
 
-      if (version.getName().equals("Velocity")) {
-        TextComponent velocityWebsite = TextComponent.builder()
-            .content("Visit the ")
-            .append(TextComponent.builder("Velocity website")
-                .color(TextColor.GREEN)
-                .clickEvent(
-                    ClickEvent.openUrl("https://www.velocitypowered.com"))
-                .build())
-            .append(TextComponent.of(" or the "))
-            .append(TextComponent.builder("Velocity GitHub")
-                .color(TextColor.GREEN)
-                .clickEvent(ClickEvent.openUrl(
-                    "https://github.com/VelocityPowered/Velocity"))
-                .build())
-            .build();
+      if (version.getName().equals("VexCord")) {
+        TextComponent velocityWebsite = TextComponent.builder().content("visit our ").append(TextComponent.builder("Website").color(TextColor.GREEN).clickEvent(ClickEvent.openUrl("https://vexation.xyz")).build()).append(TextComponent.of(" or visit our ")).append(TextComponent.builder("Discord Server").color(TextColor.GREEN).clickEvent(ClickEvent.openUrl("https://discord.vexation.xyz")).build()).build();
         source.sendMessage(velocityWebsite);
       }
     }
@@ -205,7 +191,7 @@ public class VelocityCommand implements Command {
     @Override
     public void execute(CommandSource source, String @NonNull [] args) {
       if (args.length != 0) {
-        source.sendMessage(TextComponent.of("/velocity plugins", TextColor.RED));
+        source.sendMessage(TextComponent.of("/vexcord plugins", TextColor.RED));
         return;
       }
 
@@ -261,7 +247,7 @@ public class VelocityCommand implements Command {
 
     @Override
     public boolean hasPermission(CommandSource source, String @NonNull [] args) {
-      return source.getPermissionValue("velocity.command.plugins") == Tristate.TRUE;
+      return source.getPermissionValue("vexcord.command.plugins") == Tristate.TRUE;
     }
   }
 }
