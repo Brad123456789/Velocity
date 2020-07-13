@@ -13,6 +13,9 @@ import java.util.Set;
 public enum ProtocolVersion {
   UNKNOWN(-1, "Unknown"),
   LEGACY(-2, "Legacy"),
+  MINECRAFT_1_7_11(1, "1.7ss1"),
+  MINECRAFT_1_7_12(2, "1.7ss2"),
+  MINECRAFT_1_7_1(3, "1.7pre"),
   MINECRAFT_1_7_2(4, "1.7.2"),
   MINECRAFT_1_7_6(5, "1.7.6"),
   MINECRAFT_1_8(47, "1.8"),
@@ -37,8 +40,11 @@ public enum ProtocolVersion {
   MINECRAFT_1_15(573, "1.15"),
   MINECRAFT_1_15_1(575, "1.15.1"),
   MINECRAFT_1_15_2(578, "1.15.2"),
+  MINECRAFT_1_16rc(734, "1.16rc"),
   MINECRAFT_1_16(735, "1.16"),
-  MINECRAFT_1_16_1(736, "1.16.1");
+  MINECRAFT_1_16_1(736, "1.16.1"),
+  MINECRAFT_1_16_ss1(738, "1.16.2"),
+  MINECRAFT_1_16_ss2(740, "1.16.2"),
 
   private final int protocol;
   private final String name;
