@@ -21,7 +21,7 @@ jar {
         }
 
         attributes 'Main-Class': 'com.velocitypowered.proxy.Velocity'
-        attributes 'Implementation-Title': "Velocity"
+        attributes 'Implementation-Title': "VexCord"
         attributes 'Implementation-Version': version
         attributes 'Implementation-Vendor': "Velocity Contributors"
         attributes 'Multi-Release': 'true'
