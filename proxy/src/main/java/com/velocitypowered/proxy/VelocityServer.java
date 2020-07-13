@@ -3,13 +3,11 @@ package com.velocitypowered.proxy;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.velocitypowered.api.event.EventManager;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyReloadEvent;
-import com.velocitypowered.api.network.ProtocolVersion;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.PluginManager;
 import com.velocitypowered.api.proxy.Player;
@@ -41,7 +39,6 @@ import com.velocitypowered.proxy.server.ServerMap;
 import com.velocitypowered.proxy.util.AddressUtil;
 import com.velocitypowered.proxy.util.EncryptionUtils;
 import com.velocitypowered.proxy.util.VelocityChannelRegistrar;
-import com.velocitypowered.proxy.util.bossbar.BossBarManager;
 import com.velocitypowered.proxy.util.bossbar.VelocityBossBar;
 import com.velocitypowered.proxy.util.ratelimit.Ratelimiter;
 import com.velocitypowered.proxy.util.ratelimit.Ratelimiters;
@@ -71,12 +68,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
-import net.kyori.adventure.audience.Audience;
-import net.kyori.adventure.audience.ForwardingAudience;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.TranslatableComponent;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.text.Component;
+import net.kyori.text.TextComponent;
+import net.kyori.text.TranslatableComponent;
+import net.kyori.text.serializer.gson.GsonComponentSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.asynchttpclient.AsyncHttpClient;
@@ -85,23 +80,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class VelocityServer implements ProxyServer, ForwardingAudience {
+public class VelocityServer implements ProxyServer {
 
   private static final Logger logger = LogManager.getLogger(VelocityServer.class);
-  public static final Gson GENERAL_GSON = new GsonBuilder()
+  public static final Gson GSON = GsonComponentSerializer.populate(new GsonBuilder())
       .registerTypeHierarchyAdapter(Favicon.class, new FaviconSerializer())
       .registerTypeHierarchyAdapter(GameProfile.class, new GameProfileSerializer())
-      .create();
-  private static final Gson PRE_1_16_PING_SERIALIZER = GsonComponentSerializer
-      .colorDownsamplingGson()
-      .serializer()
-      .newBuilder()
-      .registerTypeHierarchyAdapter(Favicon.class, new FaviconSerializer())
-      .create();
-  private static final Gson POST_1_16_PING_SERIALIZER = GsonComponentSerializer.gson()
-      .serializer()
-      .newBuilder()
-      .registerTypeHierarchyAdapter(Favicon.class, new FaviconSerializer())
       .create();
 
   private final ConnectionManager cm;
@@ -113,7 +97,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
   private final AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
   private boolean shutdown = false;
   private final VelocityPluginManager pluginManager;
-  private final BossBarManager bossBarManager;
 
   private final Map<UUID, ConnectedPlayer> connectionsByUuid = new ConcurrentHashMap<>();
   private final Map<String, ConnectedPlayer> connectionsByName = new ConcurrentHashMap<>();
@@ -132,7 +115,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     cm = new ConnectionManager(this);
     servers = new ServerMap(this);
     this.options = options;
-    this.bossBarManager = new BossBarManager();
   }
 
   public KeyPair getServerKeyPair() {
@@ -151,13 +133,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     String implVersion;
     String implVendor;
     if (pkg != null) {
-      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "Velocity");
+      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "VexCord");
       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
-      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
+      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Vexation Networks UK");
     } else {
-      implName = "Velocity";
+      implName = "VexCord";
       implVersion = "<unknown>";
-      implVendor = "Velocity Contributors";
+      implVendor = "Vexation Networks UK";
     }
 
     return new ProxyVersion(implName, implVendor, implVersion);
@@ -193,6 +175,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
 
     // Initialize commands first
     commandManager.register("velocity", new VelocityCommand(this));
+    commandManager.register("vexcord", new VelocityCommand(this));
+    commandManager.register("bungee", new VelocityCommand(this));
     commandManager.register("server", new ServerCommand(this));
     commandManager.register("shutdown", new ShutdownCommand(this),"end");
     commandManager.register("glist", new GlistCommand(this));
@@ -202,13 +186,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
       configuration = VelocityConfiguration.read(configPath);
 
       if (!configuration.validate()) {
-        logger.error("Your configuration is invalid. Velocity will not start up until the errors "
+        logger.error("Your configuration is invalid. VexCord will not start up until the errors "
             + "are resolved.");
         LogManager.shutdown();
         System.exit(1);
       }
     } catch (Exception e) {
-      logger.error("Unable to read/load/save your velocity.toml. The server will shut down.", e);
+      logger.error("Unable to read/load/save your Configuration File The Proxy will shut down.", e);
       LogManager.shutdown();
       System.exit(1);
     }
@@ -451,7 +435,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    * @param explicitExit whether the user explicitly shut down the proxy
    */
   public void shutdown(boolean explicitExit) {
-    shutdown(explicitExit, TextComponent.of("Proxy shutting down."));
+    shutdown(explicitExit, TextComponent.of("§r§6Proxy Server Restarting."));
   }
 
   public AsyncHttpClient getAsyncHttpClient() {
@@ -495,7 +479,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     } else {
       ConnectedPlayer existing = connectionsByUuid.get(connection.getUniqueId());
       if (existing != null) {
-        existing.disconnect(TranslatableComponent.of("multiplayer.disconnect.duplicate_login"));
+        logger.info(connection.getUsername() + " Has Logged in from another location!");
+        //existing.disconnect(TranslatableComponent.of("multiplayer.disconnect.duplicate_login")); 
+        //turning this on does not allow players to login if they are currently logged in already.
       }
 
       // We can now replace the entries as needed.
@@ -505,15 +491,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     return true;
   }
 
-  /**
-   * Unregisters the given player from the proxy.
-   *
-   * @param connection the connection to unregister
-   */
   public void unregisterConnection(ConnectedPlayer connection) {
     connectionsByName.remove(connection.getUsername().toLowerCase(Locale.US), connection);
     connectionsByUuid.remove(connection.getUniqueId(), connection);
-    bossBarManager.onDisconnect(connection);
   }
 
   @Override
@@ -617,20 +597,5 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
           "No configuration"); // even though you'll never get the chance... heh, heh
     }
     return configuration.getBind();
-  }
-
-  @Override
-  public @NonNull Iterable<? extends Audience> audiences() {
-    return (Iterable<Audience>) () -> Iterators.concat(Iterators.singletonIterator(console),
-        getAllPlayers().iterator());
-  }
-
-  public BossBarManager getBossBarManager() {
-    return bossBarManager;
-  }
-
-  public static Gson getPingGsonInstance(ProtocolVersion version) {
-    return version.compareTo(ProtocolVersion.MINECRAFT_1_16) >= 0 ? POST_1_16_PING_SERIALIZER
-        : PRE_1_16_PING_SERIALIZER;
   }
 }
