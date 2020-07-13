@@ -1,15 +1,19 @@
 package com.velocitypowered.proxy.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.moandjiezana.toml.Toml;
 import com.velocitypowered.api.proxy.config.ProxyConfig;
 import com.velocitypowered.api.util.Favicon;
+import com.velocitypowered.proxy.Velocity;
 import com.velocitypowered.proxy.util.AddressUtil;
 import java.io.IOException;
+import java.io.Reader;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,13 +22,14 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.legacytext3.LegacyText3ComponentSerializer;
+import net.kyori.text.Component;
+import net.kyori.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.text.serializer.legacy.LegacyComponentSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -49,7 +54,7 @@ public class VelocityConfiguration implements ProxyConfig {
   private final Advanced advanced;
   private final Query query;
   private final Metrics metrics;
-  private net.kyori.adventure.text.@MonotonicNonNull Component motdAsComponent;
+  private @MonotonicNonNull Component motdAsComponent;
   private @Nullable Favicon favicon;
 
   private VelocityConfiguration(Servers servers, ForcedHosts forcedHosts, Advanced advanced,
@@ -156,7 +161,7 @@ public class VelocityConfiguration implements ProxyConfig {
     }
 
     try {
-      getMotd();
+      getMotdComponent();
     } catch (Exception e) {
       logger.error("Can't parse your MOTD", e);
       valid = false;
@@ -223,23 +228,22 @@ public class VelocityConfiguration implements ProxyConfig {
     return query.shouldQueryShowPlugins();
   }
 
+  public String getMotd() {
+    return motd;
+  }
+
   /**
    * Returns the proxy's MOTD.
    *
    * @return the MOTD
    */
   @Override
-  public net.kyori.text.Component getMotdComponent() {
-    return LegacyText3ComponentSerializer.get().serialize(this.getMotd());
-  }
-
-  @Override
-  public net.kyori.adventure.text.Component getMotd() {
+  public Component getMotdComponent() {
     if (motdAsComponent == null) {
       if (motd.startsWith("{")) {
-        motdAsComponent = GsonComponentSerializer.gson().deserialize(motd);
+        motdAsComponent = GsonComponentSerializer.INSTANCE.deserialize(motd);
       } else {
-        motdAsComponent = LegacyComponentSerializer.legacy('&').deserialize(motd);
+        motdAsComponent = LegacyComponentSerializer.legacy().deserialize(motd, '&');
       }
     }
     return motdAsComponent;
